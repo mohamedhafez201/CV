@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEMA Tool - Enhanced Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide-static@latest/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-link.active {
+            background-color: #0891b2; /* cyan-600 */
+            color: white;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        .nav-link.active .lucide {
+             color: white;
+        }
+        .page-content {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .page-content.active {
+            display: block;
+        }
+        /* Style for selected assessment card */
+        .assessment-card:has(input:checked) {
+            border-color: #0891b2; /* cyan-600 */
+            box-shadow: 0 0 0 2px #0891b2;
+            background-color: #ecfeff; /* cyan-50 */
+        }
+        /* Style for the final score display */
+        .score-display-0 { background-color: #fee2e2; color: #b91c1c; } /* red */
+        .score-display-1 { background-color: #fef3c7; color: #b45309; } /* amber */
+        .score-display-2 { background-color: #dbeafe; color: #1d4ed8; } /* blue */
+        .score-display-3 { background-color: #dcfce7; color: #166534; } /* green */
+        .score-display-pending { background-color: #f1f5f9; color: #475569; } /* slate */
+
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 24px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            animation: slideIn 0.3s;
+        }
+         @keyframes slideIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-cyan-700">GEMA: Gender Equality Marker Assessment Tool</h1>
+                <p class="text-slate-600 mt-1">An interactive tool for designing and assessing gender-responsive projects.</p>
+            </div>
+            <button onclick="startTour()" class="bg-white border border-slate-300 text-slate-700 font-bold py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm">
+                <i data-lucide="compass" class="w-4 h-4"></i> Start Tour
+            </button>
+        </div>
+    </header>
+
+    <nav class="bg-slate-100 border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-start space-x-2 py-2">
+            <a href="#" id="nav-1" class="nav-link px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors duration-200" onclick="showPage(1)"><i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-500"></i>1. Project Setup</a>
+            <a href="#" id="nav-2" class="nav-link px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors duration-200" onclick="showPage(2)"><i data-lucide="file-check-2" class="w-4 h-4 text-slate-500"></i>2. Assessment</a>
+            <a href="#" id="nav-3" class="nav-link px-4 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-300 transition-colors duration-200" onclick="showPage(3)"><i data-lucide="line-chart" class="w-4 h-4 text-slate-500"></i>3. Improvement Plan</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <div id="page-1" class="page-content space-y-6">
+             <div class="bg-white p-8 rounded-lg shadow-sm border border-slate-200 text-center">
+                <i data-lucide="sparkles" class="w-12 h-12 text-cyan-500 mx-auto"></i>
+                <h2 class="text-2xl font-bold text-slate-800 mt-4">Welcome to the GEMA Tool</h2>
+                <p class="text-slate-600 mt-2 max-w-2xl mx-auto">This tool guides you through a three-step process: setting up your project, assessing its gender integration, and creating a data-driven improvement plan.</p>
+            </div>
+             <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">Project Title</h3>
+                 <input type="text" id="project-title" class="w-full p-2 border border-slate-300 rounded-md shadow-sm focus:border-cyan-500 focus:ring-cyan-500" placeholder="Enter your project title here...">
+             </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">Phase 1: Design and Planning</h2>
+                <p class="text-slate-600"><strong>Purpose:</strong> Integrate gender from the beginning and establish accountability for gender outcomes.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5 text-cyan-600"></i>Key Actions</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li>Score the initial design using the GEMA dimensions.</li>
+                        <li>Facilitate a participatory design workshop.</li>
+                        <li>Use scoring insights to finalize improvement plans.</li>
+                        <li>Document baseline scores in the proposal.</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="folder-output" class="w-5 h-5 text-cyan-600"></i>Expected Outputs</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li>GEMA Baseline Score sheet with justification.</li>
+                        <li>Gender Improvement Plan with staffing.</li>
+                        <li>Gender Outcome Indicators for the M&E plan.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-right mt-6">
+                <button class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2 ml-auto" onclick="showPage(2)">
+                    Go to Assessment<i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="page-2" class="page-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div id="assessment-questions" class="lg:col-span-2 space-y-6">
+                    </div>
+
+                <div class="sticky top-8 space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Final Score</h3>
+                        <div id="final-gema-result" class="p-4 rounded-lg text-center transition-colors duration-300">
+                            <div id="final-gema-title" class="text-2xl font-bold"></div>
+                            <p id="final-gema-description" class="text-sm mt-1"></p>
+                        </div>
+                        <div class="text-right mt-4">
+                            <span id="total-score-label" class="text-sm text-slate-500">Total Points</span>
+                            <p id="total-score" class="text-2xl font-bold text-slate-700">0 / 15</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Score Visualization</h3>
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-8 pt-6 border-t border-slate-200">
+                <button class="bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-2" onclick="showPage(1)">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>Back
+                </button>
+                <button class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2" onclick="goToImprovementPlan()">
+                    Save & Continue<i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="page-3" class="page-content space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 flex justify-between items-center">
+                <div>
+                     <h2 class="text-xl font-bold text-slate-800 mb-2">Phase 3: Improvement Plan & Report</h2>
+                     <p class="text-slate-600">Generate actions to improve your score and export your final report.</p>
+                </div>
+                <div class="flex gap-2">
+                     <button class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2" onclick="openResetModal()">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>Reset
+                    </button>
+                     <button class="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2" onclick="exportToPdf()">
+                        <i data-lucide="download" class="w-5 h-5"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">Score Simulator ("What-If" Analysis)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div id="simulator-controls" class="space-y-3">
+                        <!-- Simulator controls will be injected here -->
+                    </div>
+                    <div class="flex flex-col items-center justify-center bg-slate-50 p-4 rounded-lg">
+                         <h4 class="font-semibold text-slate-600">Simulated Final Score</h4>
+                         <div id="simulated-gema-result" class="p-3 mt-2 rounded-lg text-center transition-colors duration-300 w-full">
+                            <div id="simulated-gema-title" class="text-xl font-bold"></div>
+                            <p id="simulated-gema-description" class="text-xs mt-1"></p>
+                        </div>
+                        <canvas id="simulatorRadarChart" class="mt-4"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">Generate Improvement Actions</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div>
+                        <label for="target-score" class="block text-sm font-medium text-slate-700">1. Choose your target score:</label>
+                        <select id="target-score" class="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm">
+                            <option value="1">1 - Aware</option>
+                            <option value="2">2 - Responsive</option>
+                            <option value="3">3 - Transformative</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700">2. Select cost preference:</label>
+                        <div id="cost-preference" class="mt-2 flex space-x-4">
+                            <label><input type="radio" name="cost" value="no-cost" checked> No-cost</label>
+                            <label><input type="radio" name="cost" value="cost"> With Cost</label>
+                            <label><input type="radio" name="cost" value="all"> Show All</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                 <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-slate-800">Recommended Actions</h3>
+                 </div>
+                 <div id="improvement-actions-container" class="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    <p class="text-slate-500">Your recommended actions will appear here based on your selections.</p>
+                 </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="list-checks" class="w-5 h-5 text-cyan-600"></i>My Final Improvement Plan</h3>
+                <div id="my-action-plan-container" class="overflow-x-auto">
+                    <!-- Final plan table will be injected here -->
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                 <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-slate-800">AI-Powered Strategic Advice</h3>
+                 </div>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div id="ai-risk-container" class="p-4 bg-slate-50 rounded-lg">
+                        <button onclick="getRiskAnalysis()" class="w-full bg-amber-50 text-amber-700 font-bold py-2 px-3 rounded-lg hover:bg-amber-100 transition-colors flex items-center justify-center gap-2 text-sm">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i> Analyze Potential Risks
+                        </button>
+                        <div id="ai-risk-output" class="mt-3 text-sm text-slate-600 space-y-2"></div>
+                     </div>
+                     <div id="ai-me-container" class="p-4 bg-slate-50 rounded-lg">
+                        <button onclick="getMeIndicators()" class="w-full bg-sky-50 text-sky-700 font-bold py-2 px-3 rounded-lg hover:bg-sky-100 transition-colors flex items-center justify-center gap-2 text-sm">
+                            <i data-lucide="clipboard-list" class="w-4 h-4"></i> Suggest M&E Indicators
+                        </button>
+                        <div id="ai-me-output" class="mt-3 text-sm text-slate-600 space-y-2"></div>
+                     </div>
+                 </div>
+            </div>
+
+
+             <div class="flex justify-between items-center mt-6">
+                <button class="bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-2" onclick="showPage(2)">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>Back to Assessment
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="tourModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center">
+                 <h2 id="tour-title" class="text-xl font-bold text-cyan-700">Welcome to the GEMA Tool!</h2>
+                 <button id="closeTour" class="text-slate-500 hover:text-slate-800"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <p id="tour-content" class="text-slate-600 my-4">This quick tour will guide you through the main features.</p>
+            <div class="flex justify-between items-center mt-6">
+                <span id="tour-step" class="text-sm text-slate-500">Step 1 of 3</span>
+                <button id="tour-next" class="bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-700">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetModal" class="modal">
+      <div class="modal-content">
+        <h2 class="text-lg font-bold text-slate-800">Confirm Reset</h2>
+        <p class="text-slate-600 my-4">Are you sure you want to reset the assessment? All your scores and improvement plans will be permanently deleted.</p>
+        <div class="flex justify-end gap-3">
+          <button id="cancelReset" class="bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300">Cancel</button>
+          <button id="confirmReset" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">Yes, Reset</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="glossaryModal" class="modal">
+      <div class="modal-content">
+        <div class="flex justify-between items-center">
+            <h2 id="glossary-title" class="text-xl font-bold text-cyan-700">Glossary Term</h2>
+            <button id="closeGlossary" class="text-slate-500 hover:text-slate-800"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <p id="glossary-content" class="text-slate-600 my-4"></p>
+      </div>
+    </div>
+
+
+    <script>
+        // --- DATA AND CONFIGURATION ---
+        const GEMA_STORAGE_KEY = 'gemaToolState';
+        const TOUR_SEEN_KEY = 'gemaTourSeen';
+        const questions = [
+            { id: 'ga', title: '1. Presence of Gender Analysis', options: [
+                { score: 0, desc: "No gender-related information used or collected.", scenario: "Scenario Prompt: “We didn't ask about gender differences.”" },
+                { score: 1, desc: "Only online or report-based info was used (e.g., UN or gov't reports).", scenario: "Scenario Prompt: “We wrote that women face barriers, based on a global report.”" },
+                { score: 2, desc: "We talked directly to people (e.g., FGDs, interviews in the community) to understand local challenges.", scenario: "Scenario Prompt: “We held FGDs with rural girls to learn why they don't attend sessions.”" },
+                { score: 3, desc: "We involved women and marginalized groups in the analysis and in deciding what matters most. We explored:<br>- Agency: What choices they have (e.g., mobility, voice, decision-making)<br>- Relations: How people around them influence their choices (e.g., family, community leaders)<br>- Structure: What rules, systems, or norms help or block them (e.g., laws, services, traditions).<br>Findings were shared back and used to shape the project budget.", scenario: "" }
+            ]},
+            { id: 'power', title: '2. Power Analysis', options: [
+                { score: 0, desc: "No mention of decision-making or power.", scenario: "Scenario Prompt: “We didn't talk about power at all.”" },
+                { score: 1, desc: "Not discussed clearly.", scenario: "Scenario Prompt: “We said women face challenges, but didn't explain why.”" },
+                { score: 2, desc: "Barriers were mentioned, and we described how they affect participation, but didn't analyze who creates or controls them.", scenario: "Scenario Prompt: “We noted women can't travel and got to know that they need permission to travel, without exploring how to shift that.”" },
+                { score: 3, desc: "We clearly analyzed who holds control over decisions, resources, or movement—and worked to change those dynamics (e.g., advocacy, negotiation, power-sharing).", scenario: "Scenario Prompt: “We explored how fathers or leaders control mobility and how to shift that.”" }
+            ]},
+            { id: 'intersectionality', title: '3. Intersectionality', options: [
+                { score: 0, desc: "No mention of differences within women or men.", scenario: "Scenario Prompt: “We only said 'women' or 'men', nothing else.”" },
+                { score: 1, desc: "A Gender only—no age, disability, refugee status, etc.", scenario: "Scenario Prompt: “We didn't consider how a disabled or specific-age woman may face different issues.”" },
+                { score: 2, desc: "Considered 1-2 key identity factors (e.g., rural women, adolescent boys). It's not enough to say only “women and girls” without considering differences and use the information to adapt the activities.", scenario: "Scenario Prompt: “We explored experiences of young married women in Upper Egypt?”" },
+                { score: 3, desc: "Looked at multiple overlapping identities (e.g., age, disability, refugee, class) and designed for those specific experiences.", scenario: "Scenario Prompt: “We addressed barriers for refugee women with disabilities.”" }
+            ]},
+            { id: 'use', title: '4. Actual design/Planning change (Use of Findings)', options: [
+                { score: 0, desc: "Not used at all.", scenario: "Scenario Prompt: “We collected data but didn't use it.”" },
+                { score: 1, desc: "Mentioned in proposal but didn't change the plan.", scenario: "Scenario Prompt: “We added gender language but didn't change anything.”" },
+                { score: 2, desc: "We used the gender or power or intersectionality findings to make clear changes to activities or delivery. Examples include adjusting timing, content, facilitation, or adding support to overcome barriers (e.g., childcare, transport, safer spaces).", scenario: "Scenario Prompt: “We found women couldn't attend during the day, so we added evening options, used female facilitators, and provided transport.”" },
+                { score: 3, desc: "Used findings from gender, power and intersectional analysis (all) to shape key design decisions, budgets, partnerships, or policy work.", scenario: "Scenario Prompt: “We used the results to push for a change in local policy.” another scenario “After finding that women needed their husband's permission to join savings groups, we worked with couples and community leaders to change these norms. We also supported women-led savings circles where they now decide how to invest. This shifted both attitudes and control over household finances.”" }
+            ]},
+            { id: 'stakeholder', title: '5. Validation and trust-building (Stakeholder Engagement)', options: [
+                { score: 0, desc: "No involvement of women or local actors.", scenario: "Scenario Prompt: “We decided everything internally.”" },
+                { score: 1, desc: "Only looked at their needs from a distance (e.g., past reports).", scenario: "Scenario Prompt: “We looked at national statistics or internal reports only.”" },
+                { score: 2, desc: "Consulted for input, but didn't share back results.", scenario: "Scenario Prompt: “We asked women in interviews but didn't follow up.”" },
+                { score: 3, desc: "Women and affected groups helped shape the analysis, and we shared results in a way they could understand and respond to.", scenario: "Scenario Prompt: “We showed them the analysis and let them give feedback or approve.”" }
+            ]}
+        ];
+        const improvementActions = {
+            ga: {
+                '1': { noCost: "Read online reports from UN, local gov't, or NGOs to understand gender issues.", cost: "Commission a desk-based gender analysis by a local consultant." },
+                '2': { noCost: "Conduct simple community interviews or ask local partners to share stories from women/men.", cost: "Run FGDs with youth, women, men, and others." },
+                '3': { noCost: "Invite local leaders or marginalized voices to review findings and co-validate them.", cost: "Facilitate a participatory gender analysis workshop." }
+            },
+            power: {
+                '1': { noCost: "Read about how family, traditions, or norms shape choices in your area.", cost: "Buy training materials or host internal discussion on gender and power." },
+                '2': { noCost: "Interview local people (e.g., girls, boys, parents) about who decides what in their lives.", cost: "Hire facilitator to do in-depth gender/power analysis." },
+                '3': { noCost: "Involve community members in identifying key power barriers and solutions.", cost: "Organize a co-creation workshop on shifting power structures." }
+            },
+            intersectionality: {
+                '1': { noCost: "List key groups in your area (e.g., people with disabilities, rural girls) and how they're affected differently.", cost: "Bring in local CSOs to explain diversity." },
+                '2': { noCost: "Include questions about gender and other factors (e.g., age, ability) in your needs assessment.", cost: "Conduct inclusive FGDs or a mapping exercise." },
+                '3': { noCost: "Have different marginalized groups co-design the program priorities.", cost: "Host an intersectional analysis event or training." }
+            },
+            use: {
+                '1': { noCost: "Mention gender issues in proposal intro or background.", cost: "Hire consultant to integrate gender in logframe." },
+                '2': { noCost: "Update project activities based on gender analysis findings.", cost: "Create gender-informed M&E indicators." },
+                '3': { noCost: "Let communities track if their gender priorities are being met.", cost: "Adapt full M&E system to monitor gender and inclusion outcomes." }
+            },
+            stakeholder: {
+                '1': { noCost: "Inform local gender-focused groups about the project.", cost: "Print and share project brief with women's CSOs." },
+                '2': { noCost: "Invite stakeholders to planning sessions.", cost: "Provide transport or interpretation so diverse people can join." },
+                '3': { noCost: "Set up ongoing feedback meetings with marginalized groups.", cost: "Establish a community advisory group with regular meetings." }
+            }
+        };
+        const glossary = {
+            ga: { title: "What is Gender Analysis?", content: "Gender analysis is a systematic process of identifying and understanding the different needs, roles, access to resources, and decision-making power of women, men, boys, and girls. It explores how these differences might affect their ability to participate in and benefit from a project. A good analysis goes beyond just collecting data about men and women; it examines the underlying causes of inequalities." },
+            power: { title: "What is Power Analysis?", content: "Power analysis, in this context, looks at who holds power and makes decisions within families, communities, and institutions. It seeks to understand how power dynamics (e.g., who controls money, who can move freely, who has a voice in public) affect people's lives and their ability to participate in a project. The goal is to identify and address power imbalances that create barriers for certain groups." },
+            intersectionality: { title: "What is Intersectionality?", content: "Intersectionality is the understanding that people have multiple identities (e.g., a woman who is also from a rural area, has a disability, and is a refugee). These overlapping identities can create unique and compounded experiences of discrimination or privilege. An intersectional approach means looking beyond single categories like 'women' and considering how different aspects of a person's identity shape their experiences and needs." },
+            use: { title: "What is Use of Findings?", content: "This dimension measures whether the insights gathered from the gender, power, and intersectional analyses were actually used to make concrete changes to the project. It's the difference between simply writing about gender issues in a report and actively modifying the project's design, activities, budget, or monitoring plan based on what was learned. A high score indicates that the analysis directly informed and shaped the project's strategy." },
+            stakeholder: { title: "What is Stakeholder Engagement?", content: "This refers to the process of involving community members, especially women and marginalized groups, in the project's design and analysis. At a basic level, it might mean asking for their input. At a transformative level, it means treating them as equal partners, co-designing the project with them, sharing findings back in an accessible way, and giving them the power to approve or request changes to the plan. It builds trust and ensures the project is relevant and accountable." }
+        };
+        const questionTitles = {
+            ga: "Gender Analysis", power: "Power Analysis", intersectionality: "Intersectionality",
+            use: "Use of Findings", stakeholder: "Stakeholder Engagement"
+        };
+        const questionFullTitles = {
+            ga: "1. Presence of Gender Analysis", power: "2. Power Analysis", intersectionality: "3. Intersectionality",
+            use: "4. Actual design/Planning change (Use of Findings)", stakeholder: "5. Validation and trust-building (Stakeholder Engagement)"
+        };
+        
+        // --- APPLICATION STATE & LOGIC ---
+        let state = {};
+        let simulatedScores = {};
+        let finalGemaResult = {};
+        let radarChartInstance = null;
+        let simulatorRadarChartInstance = null;
+
+        function getDefaultState() {
+            const defaultScores = {};
+            questions.forEach(q => defaultScores[q.id] = 0);
+            const defaultNarratives = {};
+            questions.forEach(q => defaultNarratives[q.id] = '');
+
+            return {
+                projectTitle: '',
+                scores: defaultScores,
+                narratives: defaultNarratives,
+                actionPlan: [] // An array to hold action plan items
+            };
+        }
+        
+        function saveState() {
+            localStorage.setItem(GEMA_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem(GEMA_STORAGE_KEY);
+            state = savedState ? JSON.parse(savedState) : getDefaultState();
+            
+            // Ensure actionPlan is an array
+            if (!Array.isArray(state.actionPlan)) {
+                state.actionPlan = [];
+            }
+        }
+        
+        function resetState() {
+             state = getDefaultState();
+             saveState();
+             initializeAppUI();
+             closeResetModal();
+             showPage(1);
+        }
+
+        function showPage(pageNum) {
+            document.querySelectorAll('.page-content').forEach(page => page.classList.remove('active'));
+            document.querySelector(`#page-${pageNum}`).classList.add('active');
+            document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('nav a')[pageNum - 1].classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function getFinalGemaScore(s) {
+            const allScores = Object.values(s);
+            if (s.ga === 0) return { level: 0, title: "0 - Blind", description: "Gender was not considered in the analysis." };
+            
+            const isTransformative = s.ga === 3 && s.use === 3 && s.power === 3 && (s.intersectionality === 3 || s.stakeholder === 3) && !allScores.includes(0) && !allScores.includes(1);
+            if (isTransformative) return { level: 3, title: "3 - Transformative", description: "Project is designed to be gender transformative." };
+            
+            const scoresGte2 = allScores.filter(score => score >= 2).length;
+            const isResponsive = s.ga >= 2 && s.use >= 2 && s.power >= 1 && scoresGte2 >= 3 && !allScores.includes(0);
+            if (isResponsive) return { level: 2, title: "2 - Responsive", description: "Project is designed to be gender responsive." };
+            
+            if (s.ga >= 1) return { level: 1, title: "1 - Aware", description: "Project is gender aware but does not meet higher criteria." };
+            
+            return { level: 0, title: "0 - Blind", description: "Scoring did not meet minimum criteria." };
+        }
+
+        function renderRadarChart(canvasId, scoresData, chartInstance) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const data = {
+                labels: ['Gender Analysis', 'Power', 'Intersectionality', 'Use of Findings', 'Stakeholder'],
+                datasets: [{
+                    label: 'Scores',
+                    data: scoresData,
+                    backgroundColor: 'rgba(8, 145, 178, 0.2)',
+                    borderColor: 'rgba(8, 145, 178, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(8, 145, 178, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(8, 145, 178, 1)'
+                }]
+            };
+
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = scoresData;
+                chartInstance.update();
+                return chartInstance;
+            } else {
+                return new Chart(ctx, {
+                    type: 'radar',
+                    data: data,
+                    options: {
+                        scales: { r: { beginAtZero: true, max: 3, min: 0, ticks: { stepSize: 1 }, pointLabels: { font: { size: 11 } } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        function updateDisplay() {
+            const total = Object.values(state.scores).reduce((sum, score) => sum + score, 0);
+            document.getElementById('total-score').textContent = `${total} / 15`;
+
+            const resultCard = document.getElementById('final-gema-result');
+            const titleEl = document.getElementById('final-gema-title');
+            const descEl = document.getElementById('final-gema-description');
+            
+            finalGemaResult = getFinalGemaScore(state.scores);
+            titleEl.textContent = finalGemaResult.title;
+            descEl.textContent = finalGemaResult.description;
+            resultCard.className = `p-4 rounded-lg text-center transition-colors duration-300 score-display-${finalGemaResult.level}`;
+            radarChartInstance = renderRadarChart('radarChart', Object.values(state.scores), radarChartInstance);
+        }
+        
+        function goToImprovementPlan() {
+            saveState();
+            buildSimulator();
+            generateImprovementPlan();
+            updateMyActionPlanDisplay();
+            showPage(3);
+        }
+        
+        function buildSimulator() {
+            simulatedScores = { ...state.scores };
+            const container = document.getElementById('simulator-controls');
+            container.innerHTML = '';
+            for (const key in questionTitles) {
+                container.innerHTML += `
+                    <div class="grid grid-cols-3 items-center gap-2">
+                        <label for="sim-${key}" class="text-sm font-medium text-slate-600 col-span-2">${questionTitles[key]}</label>
+                        <span id="sim-val-${key}" class="text-center font-bold text-cyan-700 text-lg">${simulatedScores[key]}</span>
+                        <input type="range" id="sim-${key}" min="0" max="3" value="${simulatedScores[key]}" class="w-full col-span-3 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer sim-slider" data-area-id="${key}">
+                    </div>`;
+            }
+            
+            document.querySelectorAll('.sim-slider').forEach(slider => {
+                slider.addEventListener('input', handleSimSliderInput);
+            });
+            renderSimulation();
+        }
+
+        function handleSimSliderInput(e) {
+            const areaId = e.target.dataset.areaId;
+            simulatedScores[areaId] = parseInt(e.target.value);
+            document.getElementById(`sim-val-${areaId}`).textContent = e.target.value;
+            renderSimulation();
+        }
+
+        function renderSimulation() {
+            const result = getFinalGemaScore(simulatedScores);
+            const resultCard = document.getElementById('simulated-gema-result');
+            document.getElementById('simulated-gema-title').textContent = result.title;
+            document.getElementById('simulated-gema-description').textContent = result.description;
+            resultCard.className = `p-3 mt-2 rounded-lg text-center transition-colors duration-300 score-display-${result.level}`;
+            simulatorRadarChartInstance = renderRadarChart('simulatorRadarChart', Object.values(simulatedScores), simulatorRadarChartInstance);
+        }
+
+        function generateImprovementPlan() {
+            const targetLevel = parseInt(document.getElementById('target-score').value);
+            const costPref = document.querySelector('input[name="cost"]:checked').value;
+            const container = document.getElementById('improvement-actions-container');
+            container.innerHTML = '';
+
+            let actionsGenerated = false;
+            for (const area in state.scores) {
+                const currentScore = state.scores[area];
+                let areaHtml = `<div class="p-4 border rounded-lg bg-slate-50/50"><h4 class="font-bold text-slate-700">${questionFullTitles[area]}</h4><div class="mt-2 space-y-2">`;
+                let hasActionsForArea = false;
+
+                for (let i = currentScore + 1; i <= 3; i++) { // Always show path to max score
+                    const actionSet = improvementActions[area][i];
+                    if (actionSet) {
+                         const actionId = `${area}-${i}`;
+                         if ((costPref === 'no-cost' || costPref === 'all') && actionSet.noCost) {
+                            if (i <= targetLevel) hasActionsForArea = true;
+                            const actionKey = `${actionId}-noCost`;
+                            const isChecked = state.actionPlan.some(p => p.id === actionKey);
+                            areaHtml += `<label class="flex items-start gap-2 text-sm"><input type="checkbox" class="action-checkbox" data-action-id="${actionKey}" data-action-text="${actionSet.noCost}" ${isChecked ? 'checked' : ''}><div><span class="font-semibold text-green-700">[No-cost]</span> ${actionSet.noCost}</div></label>`;
+                        }
+                        if ((costPref === 'cost' || costPref === 'all') && actionSet.cost) {
+                            if (i <= targetLevel) hasActionsForArea = true;
+                             const actionKey = `${actionId}-cost`;
+                            const isChecked = state.actionPlan.some(p => p.id === actionKey);
+                            areaHtml += `<label class="flex items-start gap-2 text-sm"><input type="checkbox" class="action-checkbox" data-action-id="${actionKey}" data-action-text="${actionSet.cost}" ${isChecked ? 'checked' : ''}><div><span class="font-semibold text-red-700">[Cost]</span> ${actionSet.cost}</div></label>`;
+                        }
+                    }
+                }
+                areaHtml += `</div></div>`;
+                if (hasActionsForArea) {
+                    container.innerHTML += areaHtml;
+                    actionsGenerated = true;
+                }
+            }
+
+            if (!actionsGenerated) {
+                container.innerHTML = `<p class="text-slate-500 p-4">Your current scores already meet or exceed the target level. No improvement actions are needed for this target.</p>`;
+            }
+            
+            document.querySelectorAll('.action-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handleActionCheckboxChange);
+            });
+        }
+        
+        function handleActionCheckboxChange(e) {
+            const id = e.target.dataset.actionId;
+            const text = e.target.dataset.actionText;
+            if (e.target.checked) {
+                // Add to plan if it doesn't exist
+                if (!state.actionPlan.some(p => p.id === id)) {
+                    state.actionPlan.push({ id, text, responsible: '', deadline: '', notes: '' });
+                }
+            } else {
+                // Remove from plan
+                state.actionPlan = state.actionPlan.filter(p => p.id !== id);
+            }
+            saveState();
+            updateMyActionPlanDisplay();
+        }
+
+        function handlePlanInputChange(e) {
+            const id = e.target.dataset.actionId;
+            const property = e.target.dataset.property;
+            const action = state.actionPlan.find(p => p.id === id);
+            if (action) {
+                action[property] = e.target.value;
+                saveState();
+            }
+        }
+
+        function updateMyActionPlanDisplay() {
+            const container = document.getElementById('my-action-plan-container');
+            if (state.actionPlan.length === 0) {
+                 container.innerHTML = '<p class="p-4 text-center text-slate-500">Select recommended actions to add them to your plan.</p>';
+                 return;
+            }
+
+            let tableHtml = `<table class="min-w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="p-3 text-left text-sm font-semibold text-slate-600 w-2/5">Action</th>
+                        <th class="p-3 text-left text-sm font-semibold text-slate-600">Responsible Person</th>
+                        <th class="p-3 text-left text-sm font-semibold text-slate-600">Deadline</th>
+                        <th class="p-3 text-left text-sm font-semibold text-slate-600 w-1/3">Notes</th>
+                    </tr>
+                </thead><tbody>`;
+            
+            state.actionPlan.forEach(action => {
+                tableHtml += `
+                    <tr class="border-t">
+                        <td class="p-2 text-sm">${action.text}</td>
+                        <td class="p-2"><input type="text" class="plan-input w-full p-1 border rounded-md text-sm" placeholder="Assign person..." data-action-id="${action.id}" data-property="responsible" value="${action.responsible}"></td>
+                        <td class="p-2"><input type="date" class="plan-input w-full p-1 border rounded-md text-sm" data-action-id="${action.id}" data-property="deadline" value="${action.deadline}"></td>
+                        <td class="p-2"><textarea rows="1" class="plan-input w-full p-1 border rounded-md text-sm" placeholder="Add notes..." data-action-id="${action.id}" data-property="notes">${action.notes}</textarea></td>
+                    </tr>`;
+            });
+            
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+
+            document.querySelectorAll('.plan-input').forEach(input => {
+                input.addEventListener('input', handlePlanInputChange);
+            });
+        }
+
+        function buildQuestions() {
+            const container = document.getElementById('assessment-questions');
+            container.innerHTML = '';
+            const scoreLabels = ["Gender Blind", "Gender Aware", "Gender Responsive", "Gender Transformative"];
+            
+            questions.forEach(q => {
+                let optionsHtml = q.options.map(opt => `
+                    <label class="assessment-card block p-4 border-2 border-slate-200 rounded-lg cursor-pointer hover:border-cyan-500 transition-colors">
+                        <input type="radio" name="${q.id}" value="${opt.score}" class="hidden assessment-radio" data-question-id="${q.id}">
+                        <div class="font-bold">Score ${opt.score} <span class="text-sm font-normal text-slate-500 ml-2">${scoreLabels[opt.score]}</span></div>
+                        <p class="text-slate-600 mt-2 text-sm">${opt.desc}</p>
+                        ${opt.scenario ? `<p class="text-cyan-800 bg-cyan-50 p-2 rounded-md mt-2 text-sm italic">${opt.scenario}</p>` : ''}
+                    </label>
+                `).join('');
+
+                container.innerHTML += `
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">${q.title} <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 cursor-pointer hover:text-cyan-600" onclick="openGlossaryModal('${q.id}')"></i></h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${optionsHtml}</div>
+                        <div class="mt-4">
+                             <label for="narrative-${q.id}" class="text-sm font-medium text-slate-600">Narrative Justification (Optional):</label>
+                            <textarea id="narrative-${q.id}" data-question-id="${q.id}" rows="2" class="narrative-input w-full p-2 mt-1 border border-slate-300 rounded-md shadow-sm focus:border-cyan-500 focus:ring-cyan-500" placeholder="Justify the score for ${questionTitles[q.id]}..."></textarea>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        async function exportToPdf() {
+            const exportButton = document.querySelector('button[onclick="exportToPdf()"]');
+            const originalButtonContent = exportButton.innerHTML;
+            exportButton.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Exporting...`;
+            exportButton.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                
+                const addWrappedText = (text, x, y, maxWidth, lineHeight) => {
+                    const lines = pdf.splitTextToSize(text, maxWidth);
+                    pdf.text(lines, x, y);
+                    return lines.length * lineHeight;
+                };
+
+                const addSection = (title, yPos) => {
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.setTextColor(4, 120, 142);
+                    pdf.text(title, 15, yPos);
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.line(15, yPos + 2, 195, yPos + 2);
+                    return yPos + 10;
+                };
+                
+                let y = 20;
+
+                // Title
+                const projectTitle = state.projectTitle || "Untitled Project";
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(22);
+                pdf.setTextColor(8, 145, 178);
+                pdf.text(`GEMA Report: ${projectTitle}`, 105, y, { align: 'center' });
+                y += 10;
+
+                // Summary & Chart
+                y = addSection("Assessment Summary", y);
+                
+                // Recreate score card manually
+                const scoreColors = {
+                    0: { bg: [254, 226, 226], text: [185, 28, 28] },
+                    1: { bg: [254, 243, 199], text: [180, 83, 9] },
+                    2: { bg: [219, 234, 254], text: [29, 78, 216] },
+                    3: { bg: [220, 252, 231], text: [22, 101, 52] }
+                };
+                const scoreColor = scoreColors[finalGemaResult.level] || { bg: [241, 245, 249], text: [71, 85, 105] };
+                pdf.setFillColor(...scoreColor.bg);
+                pdf.rect(15, y, 80, 25, 'F');
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(16);
+                pdf.setTextColor(...scoreColor.text);
+                pdf.text(finalGemaResult.title || "Pending", 55, y + 12, { align: 'center' });
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(9);
+                addWrappedText(finalGemaResult.description || "N/A", 55, y + 18, 75, 4, { align: 'center' });
+
+                // Add chart
+                const chartCanvas = document.getElementById('radarChart');
+                const chartImage = await html2canvas(chartCanvas, { scale: 2, backgroundColor: null });
+                pdf.addImage(chartImage.toDataURL('image/png'), 'PNG', 110, y, 85, 85);
+                y += 95;
+
+                // Justifications
+                y = addSection("Score Justifications", y);
+                pdf.setFontSize(10);
+                pdf.setTextColor(51, 65, 85);
+                for(const q of questions) {
+                    if (y > 260) { pdf.addPage(); y = 20; y = addSection("Score Justifications (cont.)", y); }
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(`${q.title} (Score: ${state.scores[q.id]})`, 15, y);
+                    pdf.setFont('helvetica', 'normal');
+                    y += 5;
+                    y += addWrappedText(state.narratives[q.id] || "No justification provided.", 17, y, 176, 5);
+                    y += 5;
+                }
+
+                // Action Plan
+                 if(state.actionPlan.length > 0) {
+                    if (y > 250) { pdf.addPage(); y = 20; }
+                    y = addSection("Final Improvement Plan", y);
+                    
+                    pdf.autoTable({
+                        startY: y,
+                        head: [['Action', 'Responsible', 'Deadline', 'Notes']],
+                        body: state.actionPlan.map(a => [a.text, a.responsible, a.deadline, a.notes]),
+                        theme: 'grid',
+                        headStyles: { fillColor: [226, 232, 240], textColor: [51, 65, 85] },
+                        styles: { fontSize: 8 },
+                        columnStyles: { 0: { cellWidth: 80 }, 3: { cellWidth: 40 } }
+                    });
+                 }
+
+                pdf.save(`GEMA-Report-${projectTitle.replace(/ /g, "_")}.pdf`);
+            } catch (error) {
+                console.error("PDF Export failed:", error);
+                alert("Sorry, there was an error generating the PDF. Please try again.");
+            } finally {
+                // Restore button
+                exportButton.innerHTML = `<i data-lucide="download" class="w-5 h-5"></i>Export PDF`;
+                exportButton.disabled = false;
+                lucide.createIcons();
+            }
+        }
+        
+        // --- Modal Logic ---
+        function openResetModal() { document.getElementById('resetModal').style.display = 'block'; }
+        function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
+        function openGlossaryModal(areaId) {
+            const term = glossary[areaId];
+            if(term) {
+                document.getElementById('glossary-title').textContent = term.title;
+                document.getElementById('glossary-content').textContent = term.content;
+                document.getElementById('glossaryModal').style.display = 'block';
+            }
+        }
+        function closeGlossaryModal() { document.getElementById('glossaryModal').style.display = 'none'; }
+
+        // --- Gemini API Functions (Placeholders) ---
+        async function callGeminiApi(prompt) {
+            console.log("Calling Gemini API with prompt:", prompt);
+            // Replace this with your actual API call to Google's Gemini
+            // For now, returning a mock response after a delay
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    if (prompt.includes("potential risks")) {
+                        resolve("- Risk 1: Low stakeholder engagement may lead to lack of buy-in.\n- Risk 2: Without a strong power analysis, the project might reinforce existing inequalities.");
+                    } else if (prompt.includes("M&E indicators")) {
+                        resolve("- Indicator 1: % of female participants reporting increased confidence in decision-making.\n- Indicator 2: # of project activities adapted based on community feedback.");
+                    } else {
+                        resolve("This is a suggested text from the AI based on your selection.");
+                    }
+                }, 1500);
+            });
+        }
+        
+        async function getRiskAnalysis() {
+            const button = document.querySelector(`button[onclick="getRiskAnalysis()"]`);
+            const outputContainer = document.getElementById('ai-risk-output');
+            button.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Analyzing...`;
+            button.disabled = true;
+            lucide.createIcons();
+
+            let narrativeSummary = '';
+            for (const key in state.narratives) {
+                if (state.narratives[key]) {
+                    narrativeSummary += `- ${questionTitles[key]} (Score ${state.scores[key]}): ${state.narratives[key]}\n`;
+                }
+            }
+
+            const prompt = `You are a gender and development expert reviewing a project's GEMA assessment.
+            **Project Context:**
+            - Final Score: ${finalGemaResult.title}
+            - Dimension Scores: ${JSON.stringify(state.scores)}
+            - Justifications:\n${narrativeSummary}
+            **Task:**
+            Based on the provided scores and justifications, identify the top 2-3 potential risks to this project's success in achieving its gender equality goals. For each risk, provide a brief, one-sentence explanation.
+            **Format:**
+            Provide the response as a simple list. Each item should start with "- ". Do not add any introductory or concluding text. Do not use markdown.`;
+
+            const analysis = await callGeminiApi(prompt);
+            const analysisHtml = analysis.split('- ').filter(s => s.trim() !== '').map(item => `<p class="border-l-4 border-amber-400 pl-2 bg-amber-50 p-2 rounded-r-md">${item.trim()}</p>`).join('');
+            outputContainer.innerHTML = analysisHtml;
+            button.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4"></i> Analyze Potential Risks`;
+            button.disabled = false;
+            lucide.createIcons();
+        }
+
+        async function getMeIndicators() {
+            const button = document.querySelector(`button[onclick="getMeIndicators()"]`);
+            const outputContainer = document.getElementById('ai-me-output');
+            button.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Suggesting...`;
+            button.disabled = true;
+            lucide.createIcons();
+            
+            let selectedActions = state.actionPlan.map(a => `- ${a.text}`).join('\n');
+
+            if (state.actionPlan.length === 0) {
+                outputContainer.innerHTML = `<p class="text-sky-800">Please select some improvement actions first.</p>`;
+                button.innerHTML = `<i data-lucide="clipboard-list" class="w-4 h-4"></i> Suggest M&E Indicators`;
+                button.disabled = false;
+                lucide.createIcons();
+                return;
+            }
+
+            const prompt = `You are a Monitoring, Evaluation, and Learning (MEAL) expert specializing in gender.
+            A project has identified the following improvement actions to become more gender-responsive/transformative:\n${selectedActions}
+            **Task:**
+            For this list of actions, suggest 2-3 practical, high-level M&E indicators that could be used to track progress. The indicators should be clear and directly related to the proposed actions.
+            **Format:**
+            Provide the response as a simple list. Each item should start with "- ". Do not add any introductory or concluding text. Do not use markdown.`;
+
+            const indicators = await callGeminiApi(prompt);
+            const indicatorsHtml = indicators.split('- ').filter(s => s.trim() !== '').map(item => `<p class="border-l-4 border-sky-400 pl-2 bg-sky-50 p-2 rounded-r-md">${item.trim()}</p>`).join('');
+            outputContainer.innerHTML = indicatorsHtml;
+            button.innerHTML = `<i data-lucide="clipboard-list" class="w-4 h-4"></i> Suggest M&E Indicators`;
+            button.disabled = false;
+            lucide.createIcons();
+        }
+
+
+        // --- Tour Logic ---
+        let currentTourStep = 0;
+        const tourSteps = [
+            {
+                title: "Welcome to the GEMA Tool!",
+                content: "This quick tour will guide you through the main features. First, give your project a title here on the Project Setup page."
+            },
+            {
+                title: "The Assessment Page",
+                content: "On this page, you'll score your project across five key dimensions. Select a score for each, and optionally add a narrative justification. Your final score and a radar chart will update in real-time on the right."
+            },
+            {
+                title: "The Improvement Plan Page",
+                content: "This is where you turn your assessment into action. Use the 'Score Simulator' to see how changes affect your rating, generate recommended actions, and get AI-powered advice to build your final plan. When you're done, you can export a full report."
+            }
+        ];
+
+        function startTour() {
+            currentTourStep = 0;
+            showTourStep(currentTourStep);
+        }
+
+        function showTourStep(stepIndex) {
+            if (stepIndex >= tourSteps.length) {
+                closeTourModal();
+                return;
+            }
+            const step = tourSteps[stepIndex];
+            document.getElementById('tour-title').textContent = step.title;
+            document.getElementById('tour-content').textContent = step.content;
+            document.getElementById('tour-step').textContent = `Step ${stepIndex + 1} of ${tourSteps.length}`;
+            
+            if (stepIndex === tourSteps.length - 1) {
+                document.getElementById('tour-next').textContent = "Finish";
+            } else {
+                 document.getElementById('tour-next').textContent = "Next";
+            }
+
+            showPage(stepIndex + 1); // Navigate to the relevant page for the tour step
+            document.getElementById('tourModal').style.display = 'block';
+        }
+
+        function closeTourModal() {
+            document.getElementById('tourModal').style.display = 'none';
+            localStorage.setItem(TOUR_SEEN_KEY, 'true');
+        }
+        
+        // --- Event Handlers ---
+        function handleAssessmentInputChange(e) {
+            const target = e.target;
+            if (target.classList.contains('assessment-radio')) {
+                state.scores[target.name] = parseInt(target.value);
+            }
+            if (target.classList.contains('narrative-input')) {
+                state.narratives[target.dataset.questionId] = target.value;
+            }
+            updateDisplay();
+            saveState();
+        }
+
+        // --- INITIALIZATION ---
+        function initializeAppUI() {
+            document.getElementById('project-title').value = state.projectTitle || '';
+            for (const key in state.scores) {
+                const radio = document.querySelector(`input[name="${key}"][value="${state.scores[key]}"]`);
+                if(radio) radio.checked = true;
+            }
+             for (const key in state.narratives) {
+                const textarea = document.getElementById(`narrative-${key}`);
+                if(textarea) textarea.value = state.narratives[key] || '';
+            }
+            updateDisplay();
+            updateMyActionPlanDisplay();
+        }
+
+        function initializeApp() {
+            buildQuestions();
+            loadState();
+            initializeAppUI();
+            
+            // Centralized event listener for performance
+            const assessmentContainer = document.getElementById('assessment-questions');
+            assessmentContainer.addEventListener('input', handleAssessmentInputChange);
+            
+            document.getElementById('project-title').addEventListener('input', (e) => {
+                state.projectTitle = e.target.value;
+                saveState();
+            });
+
+            document.getElementById('target-score').addEventListener('change', generateImprovementPlan);
+            document.getElementById('cost-preference').addEventListener('change', generateImprovementPlan);
+            
+            document.getElementById('cancelReset').addEventListener('click', closeResetModal);
+            document.getElementById('confirmReset').addEventListener('click', resetState);
+            
+            document.getElementById('closeGlossary').addEventListener('click', closeGlossaryModal);
+            document.getElementById('tour-next').addEventListener('click', () => {
+                currentTourStep++;
+                showTourStep(currentTourStep);
+            });
+            document.getElementById('closeTour').addEventListener('click', closeTourModal);
+
+            window.onclick = function(event) {
+                if (event.target == document.getElementById('resetModal')) closeResetModal();
+                if (event.target == document.getElementById('glossaryModal')) closeGlossaryModal();
+                if (event.target == document.getElementById('tourModal')) closeTourModal();
+            }
+            
+            showPage(1);
+            lucide.createIcons();
+
+            if (!localStorage.getItem(TOUR_SEEN_KEY)) {
+                setTimeout(startTour, 500); // Delay tour slightly to ensure everything is loaded
+            }
+        }
+
+        window.addEventListener('load', initializeApp);
+
+    </script>
+</body>
+</html>
